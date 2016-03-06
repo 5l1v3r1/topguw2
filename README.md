@@ -1,6 +1,6 @@
 # topguw2
 
-## about
+## About
 Topguw 2 is the second version of Topguw ( https://github.com/bastienjalbert/topguw ). This new version uses only GR-GSM and not airprobe anymore by using topguw_api ( https://github.com/bastienjalbert/topguw_api ).
 
 ## Project status 
