@@ -24,13 +24,14 @@ import org.junit.Test;
 public class ChannelUtilsTest {
     
     public static void main(String[] args) {
-        testFindTimeslot();
+        ChannelUtilsTest a = new ChannelUtilsTest();
+        a.testFindTimeslot();
     }
     /**
      * Test of findImmediateAssig method, of class ChannelUtils.
      */
     @Test
-    public static void testFindTimeslot() {
+    public void testFindTimeslot() {
        // cell
         Cell cell = new Cell("951500000", 121, "GSM900", "152200");
         // rtl conf

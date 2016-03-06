@@ -27,20 +27,26 @@
  */
 package gsm.topguw2.utils;
 
+import gsm.topguw.conf.RtlsdrConf;
+import gsm.topguw.generality.Cell;
+import java.io.File;
+
 /**
  *
  * @author bastien.enjalbert
  */
 public class Utils {
-    
-    // TODO mieux conceptualiser (
-    
-    // faire une nouvelle classe qui regroupera des méthodes sur les channels qui seront utilisé par le programme (ici ?)
-    // faire une gui propre, sinon retour v1 ^^
-    
-    /** initialisation */
-    public Utils() {
-        
-    }
+
+
+        /**
+         * Perform an analyse on a cfile to try to recover some keystream
+         * @param cfile the cfile to work on
+         * @param workspace workspace that stores analysis files
+         * @param rtlconf the rtl-sdr device conf
+         */
+        public void performAnalyse(File cfile, File workspace, RtlsdrConf rtlconf, Cell cell) {
+            
+        }
+   
     
 }
