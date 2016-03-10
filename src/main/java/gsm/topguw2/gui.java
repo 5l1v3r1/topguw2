@@ -1,23 +1,17 @@
 /*
- *Feuille de route : il reste à faire : 
-************************************ 24 fev ************************************
-- Toutes la parties de retro ingéniring -> créer un boutton unique pour trouver keystream ? --> rapidité pour finir l'app !!!
-- Partie de scan et de sniffing à bien étudier (quite à y revenir dessus), s'assurer de la cohérence de ce qui a été fait
-  et faire ce qui doit etre fait (snif par fréquence notamment)
-- Réfléchir succintement au hopping de channel via l'intégration de GR-GSM
-- Ajouter les tour gsm dans sniff a cell (trouver moyen de les identifier, par ARFCN ou Freq)
+************************************ 7 mar ************************************
+- Think about hopping de channel (gr-gsm)
  */
 package gsm.topguw2;
 
+import gsm.topguw2.utils.Utils;
 import gsm.topguw.conf.RtlsdrConf;
 import gsm.topguw.err.RtlsdrError;
-import gsm.topguw.generality.Cell;
 import gsm.topguw.tools.Scanner;
+import gsm.topguw.generality.Cell;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.JFileChooser;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
@@ -31,10 +25,13 @@ public class gui extends javax.swing.JFrame {
      * VARIABLES
      */
     // rtl sdr configuration
-    private RtlsdrConf conf = new RtlsdrConf();
+    private RtlsdrConf confRtl = new RtlsdrConf();
 
     // cells founded in the current use of the program
     private ArrayList<Cell> cells;
+    
+    // current cell to work with
+    private Cell cuCell;
 
     // workspace
     private File workspace;
@@ -97,6 +94,9 @@ public class gui extends javax.swing.JFrame {
         setWorkspace = new javax.swing.JButton();
         jLabel11 = new javax.swing.JLabel();
         currentWorkspaceLbl = new javax.swing.JLabel();
+        jLabel15 = new javax.swing.JLabel();
+        jLabel16 = new javax.swing.JLabel();
+        jComboBox1 = new javax.swing.JComboBox<>();
         errorDial = new javax.swing.JDialog();
         jScrollPane2 = new javax.swing.JScrollPane();
         errorinformation = new javax.swing.JTextArea();
@@ -119,15 +119,15 @@ public class gui extends javax.swing.JFrame {
         setACellDial = new javax.swing.JDialog();
         freqLblDial = new javax.swing.JLabel();
         frequencySetACellDial = new javax.swing.JTextField();
-        jLabel1 = new javax.swing.JLabel();
+        arfcnLblDial = new javax.swing.JLabel();
         arfcnSetACellDial = new javax.swing.JTextField();
-        jLabel2 = new javax.swing.JLabel();
+        gsmTYpeCellDial = new javax.swing.JLabel();
         gsmtypeSetACellDial1 = new javax.swing.JComboBox<>();
-        jButton1 = new javax.swing.JButton();
+        setACellDialSaveBtn = new javax.swing.JButton();
         sniffACellDial = new javax.swing.JDialog();
         sniffACellLblDial = new javax.swing.JLabel();
         selectCellToSniff = new javax.swing.JComboBox<>();
-        jButton2 = new javax.swing.JButton();
+        startsniffBtnDial = new javax.swing.JButton();
         configurationRtlSniffDial = new javax.swing.JButton();
         jLabel14 = new javax.swing.JLabel();
         scanCellsBtn = new javax.swing.JButton();
@@ -140,10 +140,12 @@ public class gui extends javax.swing.JFrame {
         openCfileBtn = new javax.swing.JButton();
         cfileNameLbl = new javax.swing.JLabel();
         performAnalyseBtn = new javax.swing.JButton();
+        jSeparator1 = new javax.swing.JSeparator();
+        jScrollPane3 = new javax.swing.JScrollPane();
+        activityLog = new javax.swing.JTextPane();
 
         aboutDial.setTitle("About Topguw");
         aboutDial.setLocation(new java.awt.Point(0, 0));
-        aboutDial.setMaximumSize(new java.awt.Dimension(430, 471));
         aboutDial.setMinimumSize(new java.awt.Dimension(430, 471));
         aboutDial.setModal(true);
         aboutDial.setResizable(false);
@@ -190,7 +192,7 @@ public class gui extends javax.swing.JFrame {
         );
 
         configDial.setTitle("Configuration");
-        configDial.setMinimumSize(new java.awt.Dimension(378, 310));
+        configDial.setMinimumSize(new java.awt.Dimension(378, 413));
         configDial.setModal(true);
 
         jLabel4.setText("PPM");
@@ -231,6 +233,13 @@ public class gui extends javax.swing.JFrame {
 
         currentWorkspaceLbl.setText(workspace.toString());
 
+        jLabel15.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
+        jLabel15.setText("GSM broadcast cell type");
+
+        jLabel16.setText("Make your choice");
+
+        jComboBox1.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "BCCH", "BCCH_SDCCH4" }));
+
         javax.swing.GroupLayout configDialLayout = new javax.swing.GroupLayout(configDial.getContentPane());
         configDial.getContentPane().setLayout(configDialLayout);
         configDialLayout.setHorizontalGroup(
@@ -238,9 +247,6 @@ public class gui extends javax.swing.JFrame {
             .addGroup(configDialLayout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(configDialLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, configDialLayout.createSequentialGroup()
-                        .addGap(0, 0, Short.MAX_VALUE)
-                        .addComponent(saveconf))
                     .addGroup(configDialLayout.createSequentialGroup()
                         .addComponent(jLabel4)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
@@ -250,11 +256,14 @@ public class gui extends javax.swing.JFrame {
                             .addComponent(jLabel6)
                             .addComponent(jLabel5)
                             .addComponent(jLabel10))
-                        .addGap(113, 113, 113)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 113, Short.MAX_VALUE)
                         .addGroup(configDialLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(gainconf)
                             .addComponent(samplerateconf)
                             .addComponent(setWorkspace, javax.swing.GroupLayout.DEFAULT_SIZE, 159, Short.MAX_VALUE)))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, configDialLayout.createSequentialGroup()
+                        .addGap(0, 0, Short.MAX_VALUE)
+                        .addComponent(saveconf))
                     .addGroup(configDialLayout.createSequentialGroup()
                         .addGroup(configDialLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(jLabel3)
@@ -262,8 +271,13 @@ public class gui extends javax.swing.JFrame {
                             .addGroup(configDialLayout.createSequentialGroup()
                                 .addComponent(jLabel11)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(currentWorkspaceLbl)))
-                        .addGap(0, 0, Short.MAX_VALUE)))
+                                .addComponent(currentWorkspaceLbl))
+                            .addComponent(jLabel15))
+                        .addGap(0, 0, Short.MAX_VALUE))
+                    .addGroup(configDialLayout.createSequentialGroup()
+                        .addComponent(jLabel16)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, 161, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addContainerGap())
         );
         configDialLayout.setVerticalGroup(
@@ -293,8 +307,17 @@ public class gui extends javax.swing.JFrame {
                 .addGroup(configDialLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jLabel11)
                     .addComponent(currentWorkspaceLbl))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 12, Short.MAX_VALUE)
-                .addComponent(saveconf)
+                .addGap(18, 18, 18)
+                .addComponent(jLabel15)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(configDialLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(configDialLayout.createSequentialGroup()
+                        .addComponent(jLabel16)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 65, Short.MAX_VALUE)
+                        .addComponent(saveconf))
+                    .addGroup(configDialLayout.createSequentialGroup()
+                        .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(0, 0, Short.MAX_VALUE)))
                 .addContainerGap())
         );
 
@@ -338,7 +361,6 @@ public class gui extends javax.swing.JFrame {
         );
 
         configScanDial.setTitle("Give some informations before scanning");
-        configScanDial.setMaximumSize(new java.awt.Dimension(480, 320));
         configScanDial.setMinimumSize(new java.awt.Dimension(480, 320));
         configScanDial.setModal(true);
         configScanDial.setResizable(false);
@@ -450,7 +472,6 @@ public class gui extends javax.swing.JFrame {
         cfileLocation.setFileFilter(new FileNameExtensionFilter(".cfile .CFILE", "CFILE", "cfile"));
 
         setACellDial.setTitle("Set a cell manually");
-        setACellDial.setMaximumSize(new java.awt.Dimension(404, 249));
         setACellDial.setMinimumSize(new java.awt.Dimension(404, 249));
         setACellDial.setModal(true);
         setACellDial.setResizable(false);
@@ -459,11 +480,9 @@ public class gui extends javax.swing.JFrame {
 
         frequencySetACellDial.setText("Hz");
 
-        jLabel1.setText("ARFCN ");
+        arfcnLblDial.setText("ARFCN ");
 
-        arfcnSetACellDial.setText("jTextField1");
-
-        jLabel2.setText("GSM type");
+        gsmTYpeCellDial.setText("GSM type");
 
         gsmtypeSetACellDial1.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -471,10 +490,10 @@ public class gui extends javax.swing.JFrame {
             }
         });
 
-        jButton1.setText("Save");
-        jButton1.addActionListener(new java.awt.event.ActionListener() {
+        setACellDialSaveBtn.setText("Save");
+        setACellDialSaveBtn.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton1ActionPerformed(evt);
+                setACellDialSaveBtnActionPerformed(evt);
             }
         });
 
@@ -483,23 +502,22 @@ public class gui extends javax.swing.JFrame {
         setACellDialLayout.setHorizontalGroup(
             setACellDialLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(setACellDialLayout.createSequentialGroup()
+                .addGap(53, 53, 53)
                 .addGroup(setACellDialLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(setACellDialLayout.createSequentialGroup()
-                        .addGap(53, 53, 53)
-                        .addGroup(setACellDialLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(freqLblDial)
-                            .addComponent(jLabel1)
-                            .addComponent(jLabel2))
-                        .addGap(99, 99, 99)
-                        .addGroup(setACellDialLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(gsmtypeSetACellDial1, javax.swing.GroupLayout.PREFERRED_SIZE, 145, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addGroup(setACellDialLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                .addComponent(frequencySetACellDial)
-                                .addComponent(arfcnSetACellDial, javax.swing.GroupLayout.DEFAULT_SIZE, 149, Short.MAX_VALUE))))
-                    .addGroup(setACellDialLayout.createSequentialGroup()
-                        .addGap(160, 160, 160)
-                        .addComponent(jButton1)))
+                    .addComponent(freqLblDial)
+                    .addComponent(arfcnLblDial)
+                    .addComponent(gsmTYpeCellDial))
+                .addGap(99, 99, 99)
+                .addGroup(setACellDialLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(gsmtypeSetACellDial1, javax.swing.GroupLayout.PREFERRED_SIZE, 145, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(setACellDialLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                        .addComponent(frequencySetACellDial)
+                        .addComponent(arfcnSetACellDial, javax.swing.GroupLayout.DEFAULT_SIZE, 149, Short.MAX_VALUE)))
                 .addContainerGap(29, Short.MAX_VALUE))
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, setACellDialLayout.createSequentialGroup()
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(setACellDialSaveBtn)
+                .addGap(161, 161, 161))
         );
         setACellDialLayout.setVerticalGroup(
             setACellDialLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -510,25 +528,25 @@ public class gui extends javax.swing.JFrame {
                     .addComponent(frequencySetACellDial, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(26, 26, 26)
                 .addGroup(setACellDialLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel1)
+                    .addComponent(arfcnLblDial)
                     .addComponent(arfcnSetACellDial, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(20, 20, 20)
                 .addGroup(setACellDialLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel2)
+                    .addComponent(gsmTYpeCellDial)
                     .addComponent(gsmtypeSetACellDial1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 41, Short.MAX_VALUE)
-                .addComponent(jButton1)
-                .addGap(21, 21, 21))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 33, Short.MAX_VALUE)
+                .addComponent(setACellDialSaveBtn)
+                .addGap(29, 29, 29))
         );
 
         sniffACellLblDial.setText("Select which gsm cell you want to sniff : ");
 
         selectCellToSniff.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
 
-        jButton2.setText("Start sniff");
-        jButton2.addActionListener(new java.awt.event.ActionListener() {
+        startsniffBtnDial.setText("Start sniff");
+        startsniffBtnDial.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton2ActionPerformed(evt);
+                startsniffBtnDialActionPerformed(evt);
             }
         });
 
@@ -546,18 +564,16 @@ public class gui extends javax.swing.JFrame {
         sniffACellDialLayout.setHorizontalGroup(
             sniffACellDialLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(sniffACellDialLayout.createSequentialGroup()
-                .addContainerGap(36, Short.MAX_VALUE)
-                .addGroup(sniffACellDialLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                    .addGroup(sniffACellDialLayout.createSequentialGroup()
-                        .addComponent(jLabel14)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(configurationRtlSniffDial))
-                    .addComponent(sniffACellLblDial, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(selectCellToSniff, javax.swing.GroupLayout.Alignment.LEADING, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addContainerGap(36, Short.MAX_VALUE))
-            .addGroup(sniffACellDialLayout.createSequentialGroup()
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(jButton2)
+                .addGroup(sniffACellDialLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(sniffACellDialLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                        .addGroup(sniffACellDialLayout.createSequentialGroup()
+                            .addComponent(jLabel14)
+                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(configurationRtlSniffDial))
+                        .addComponent(sniffACellLblDial, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(selectCellToSniff, javax.swing.GroupLayout.Alignment.LEADING, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addComponent(startsniffBtnDial))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         sniffACellDialLayout.setVerticalGroup(
@@ -572,7 +588,7 @@ public class gui extends javax.swing.JFrame {
                     .addComponent(configurationRtlSniffDial)
                     .addComponent(jLabel14))
                 .addGap(37, 37, 37)
-                .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 25, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(startsniffBtnDial, javax.swing.GroupLayout.PREFERRED_SIZE, 25, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(21, 21, 21))
         );
 
@@ -635,37 +651,45 @@ public class gui extends javax.swing.JFrame {
             }
         });
 
+        activityLog.setContentType("text/html"); // NOI18N
+        activityLog.setText("<html>\n  <head>\n\n  </head>\n  <body>\n    \n  </body>\n</html>\n");
+        jScrollPane3.setViewportView(activityLog);
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
-                .addGap(26, 26, 26)
+                .addContainerGap(26, Short.MAX_VALUE)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(layout.createSequentialGroup()
-                        .addComponent(performAnalyseBtn)
-                        .addGap(0, 0, Short.MAX_VALUE))
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(headerLogo)
                         .addGap(34, 34, 34)
                         .addComponent(programDescription)
                         .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                     .addGroup(layout.createSequentialGroup()
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                            .addComponent(openCfileBtn, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(scanCellsBtn, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                        .addGap(18, 18, 18)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                            .addGroup(layout.createSequentialGroup()
-                                .addComponent(sniffCellBtn)
+                        .addComponent(performAnalyseBtn)
+                        .addGap(0, 0, Short.MAX_VALUE))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addComponent(jScrollPane3, javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jSeparator1)
+                            .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                                    .addComponent(openCfileBtn, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                    .addComponent(scanCellsBtn, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                                 .addGap(18, 18, 18)
-                                .addComponent(setACellBtn))
-                            .addComponent(cfileNameLbl, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 367, Short.MAX_VALUE)
-                        .addComponent(configBtn)
-                        .addGap(32, 32, 32)
-                        .addComponent(aboutBtn)
-                        .addGap(34, 34, 34))))
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                    .addGroup(layout.createSequentialGroup()
+                                        .addComponent(sniffCellBtn)
+                                        .addGap(18, 18, 18)
+                                        .addComponent(setACellBtn))
+                                    .addComponent(cfileNameLbl, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 367, Short.MAX_VALUE)
+                                .addComponent(configBtn)
+                                .addGap(32, 32, 32)
+                                .addComponent(aboutBtn)))
+                        .addContainerGap(34, Short.MAX_VALUE))))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -690,7 +714,11 @@ public class gui extends javax.swing.JFrame {
                     .addComponent(cfileNameLbl, javax.swing.GroupLayout.PREFERRED_SIZE, 33, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(18, 18, 18)
                 .addComponent(performAnalyseBtn)
-                .addContainerGap(534, Short.MAX_VALUE))
+                .addGap(18, 18, 18)
+                .addComponent(jSeparator1, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 461, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(39, Short.MAX_VALUE))
         );
 
         pack();
@@ -710,13 +738,13 @@ public class gui extends javax.swing.JFrame {
 
     private void saveconfActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_saveconfActionPerformed
         if (ppmconf.getText() != null && ppmconf.getText().length() > 0) {
-            conf.setPpm(Integer.parseInt(ppmconf.getText()));
+            confRtl.setPpm(Integer.parseInt(ppmconf.getText()));
         }
         if (samplerateconf.getText() != null && samplerateconf.getText().length() > 0) {
-            conf.setPpm(Integer.parseInt(samplerateconf.getText()));
+            confRtl.setPpm(Integer.parseInt(samplerateconf.getText()));
         }
         if (gainconf.getText() != null && gainconf.getText().length() > 0) {
-            conf.setPpm(Integer.parseInt(gainconf.getText()));
+            confRtl.setPpm(Integer.parseInt(gainconf.getText()));
         }
         configDial.setVisible(false);
     }//GEN-LAST:event_saveconfActionPerformed
@@ -741,11 +769,11 @@ public class gui extends javax.swing.JFrame {
 
         // show scan options
         performingScan.setVisible(true);
-        performingScan.setOpaque(false);
         StartScanBtnDial.setVisible(false);
+        System.err.println(gsmtype.getSelectedItem().toString());
         try {
             // launch the scan
-            cells = Scanner.getGsmCells(gsmtype.getSelectedItem().toString(), conf);
+            cells = Scanner.getGsmCells(gsmtype.getSelectedItem().toString(), confRtl);
             if (cells.isEmpty()) {
                 performingScan.setText("No cell have been found.");
                 StartScanBtnDial.setVisible(true);
@@ -784,6 +812,7 @@ public class gui extends javax.swing.JFrame {
                 selectCellToSniff.addItem(c.toString());
             }
         }
+        // TODO make the windows
     }//GEN-LAST:event_sniffCellBtnActionPerformed
 
     private void setWorkspaceActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_setWorkspaceActionPerformed
@@ -799,11 +828,16 @@ public class gui extends javax.swing.JFrame {
     }//GEN-LAST:event_setWorkspaceActionPerformed
 
     private void btnconf2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnconf2ActionPerformed
-        // TODO add your handling code here:
+        // open configuration
+        configDial.setVisible(true);
     }//GEN-LAST:event_btnconf2ActionPerformed
 
     private void startSniffingActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_startSniffingActionPerformed
-        // TODO add your handling code here:
+        // TODO 
+        // - instantiate cuCell var
+        // - use Capture class from topguw api
+        // - add a button to make the possibility to stop sniffing
+        
     }//GEN-LAST:event_startSniffingActionPerformed
 
     private void cellsForSniffingActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cellsForSniffingActionPerformed
@@ -818,33 +852,41 @@ public class gui extends javax.swing.JFrame {
         int result = cfileLocation.showSaveDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
             cfile = new File(cfileLocation.getSelectedFile().getAbsolutePath());
+            cfileNameLbl.setText(cfile.getName());
+            performAnalyseBtn.setEnabled(true);
+        } else {
+            // DO NOTHING
         }
-        cfileNameLbl.setText(cfile.getName());
-        performAnalyseBtn.setEnabled(true);
-        // 
     }//GEN-LAST:event_openCfileBtnActionPerformed
 
     private void performAnalyseBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_performAnalyseBtnActionPerformed
-
+        // - instanciate the cell whose the capture file have been 
+        
+        
+        Utils.performAnalyse(cfile, workspace, confRtl, cuCell, activityLog);
     }//GEN-LAST:event_performAnalyseBtnActionPerformed
 
     private void gsmtypeSetACellDial1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_gsmtypeSetACellDial1ActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_gsmtypeSetACellDial1ActionPerformed
 
-    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+    private void setACellDialSaveBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_setACellDialSaveBtnActionPerformed
         // TODO add your handling code here:
-    }//GEN-LAST:event_jButton1ActionPerformed
+    }//GEN-LAST:event_setACellDialSaveBtnActionPerformed
 
     private void configurationRtlSniffDialActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_configurationRtlSniffDialActionPerformed
-         configDial.setVisible(true);
+        configDial.setVisible(true);
     }//GEN-LAST:event_configurationRtlSniffDialActionPerformed
 
-    private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
+    private void startsniffBtnDialActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_startsniffBtnDialActionPerformed
         // TODO sniff the cell :
-        // - getting the string, get the cell via StringTo
+        Cell cell = Cell.stringTo(selectCellToSniff.getSelectedItem().toString());
+        
+        Utils.performAnalyse(cfile, workspace, confRtl, cell, activityLog);
+        
+        
         // - use Capture from the api
-    }//GEN-LAST:event_jButton2ActionPerformed
+    }//GEN-LAST:event_startsniffBtnDialActionPerformed
 
     /**
      * @param args the command line arguments
@@ -881,6 +923,8 @@ public class gui extends javax.swing.JFrame {
     private javax.swing.JButton StartScanBtnDial;
     private javax.swing.JButton aboutBtn;
     private javax.swing.JDialog aboutDial;
+    private javax.swing.JTextPane activityLog;
+    private javax.swing.JLabel arfcnLblDial;
     private javax.swing.JTextField arfcnSetACellDial;
     private javax.swing.JButton btnconf2;
     private javax.swing.JComboBox<String> cellsForSniffing;
@@ -899,19 +943,19 @@ public class gui extends javax.swing.JFrame {
     private javax.swing.JLabel freqLblDial;
     private javax.swing.JTextField frequencySetACellDial;
     private javax.swing.JFormattedTextField gainconf;
+    private javax.swing.JLabel gsmTYpeCellDial;
     private javax.swing.JComboBox<String> gsmtype;
     private javax.swing.JComboBox<String> gsmtypeSetACellDial1;
     private javax.swing.JLabel headerLogo;
     private javax.swing.JTextPane infoabout;
-    private javax.swing.JButton jButton1;
-    private javax.swing.JButton jButton2;
-    private javax.swing.JLabel jLabel1;
+    private javax.swing.JComboBox<String> jComboBox1;
     private javax.swing.JLabel jLabel10;
     private javax.swing.JLabel jLabel11;
     private javax.swing.JLabel jLabel12;
     private javax.swing.JLabel jLabel13;
     private javax.swing.JLabel jLabel14;
-    private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLabel15;
+    private javax.swing.JLabel jLabel16;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
@@ -921,6 +965,8 @@ public class gui extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel9;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
+    private javax.swing.JScrollPane jScrollPane3;
+    private javax.swing.JSeparator jSeparator1;
     private javax.swing.JButton openCfileBtn;
     private javax.swing.JButton performAnalyseBtn;
     private javax.swing.JLabel performingScan;
@@ -932,12 +978,14 @@ public class gui extends javax.swing.JFrame {
     private javax.swing.JComboBox<String> selectCellToSniff;
     private javax.swing.JButton setACellBtn;
     private javax.swing.JDialog setACellDial;
+    private javax.swing.JButton setACellDialSaveBtn;
     private javax.swing.JButton setWorkspace;
     private javax.swing.JDialog sniffACellDial;
     private javax.swing.JLabel sniffACellLblDial;
     private javax.swing.JButton sniffCellBtn;
     private javax.swing.JDialog sniffcellDial;
     private javax.swing.JButton startSniffing;
+    private javax.swing.JButton startsniffBtnDial;
     private javax.swing.JFileChooser workspaceLocation;
     // End of variables declaration//GEN-END:variables
 }

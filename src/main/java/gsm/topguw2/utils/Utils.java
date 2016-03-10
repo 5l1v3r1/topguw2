@@ -27,9 +27,16 @@
  */
 package gsm.topguw2.utils;
 
+import gsm.topguw.channels.Channels;
 import gsm.topguw.conf.RtlsdrConf;
+import gsm.topguw.err.ChannelError;
 import gsm.topguw.generality.Cell;
+import gsm.topguw.tools.Decode;
 import java.io.File;
+import javax.swing.JTextPane;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.StyledDocument;
+
 
 /**
  *
@@ -43,10 +50,28 @@ public class Utils {
          * @param cfile the cfile to work on
          * @param workspace workspace that stores analysis files
          * @param rtlconf the rtl-sdr device conf
+         * @param cell the cell
+         * @param log the text location where data will be
          */
-        public void performAnalyse(File cfile, File workspace, RtlsdrConf rtlconf, Cell cell) {
+        public static void performAnalyse(File cfile, File workspace, RtlsdrConf rtlconf, Cell cell, JTextPane log) {
+            try {
+                // getting the broadcast channel
+                Channels broadcast = Decode.getChannel("standalonecontrol", 0, 0, new File("/root/Bureau/temp/test2.cfile"));
+                //findImmediateAssig
+                appendString("test", log);
+            } catch (ChannelError | BadLocationException ex) {
+                //log.getStyledDocument().insertString(log.getStyledDocument().getLength(), ex.getMessage(), null);
+            }
+            
+            
             
         }
+        
+        public static void appendString(String str, JTextPane jtext) throws BadLocationException {
+             StyledDocument document = (StyledDocument) jtext.getDocument();
+             document.insertString(document.getLength(), str, null);
+                                                            // ^ or your style attribute  
+         }
    
     
 }
